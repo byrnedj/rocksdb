@@ -6,14 +6,16 @@
 // This file implements the "bridge" between Java and C++ and enables
 // calling C++ ROCKSDB_NAMESPACE::OptionsUtil methods from Java side.
 
+#include "rocksdb/utilities/options_util.h"
+
 #include <jni.h>
+
 #include <string>
 
 #include "include/org_rocksdb_OptionsUtil.h"
-
 #include "rocksdb/db.h"
 #include "rocksdb/env.h"
-#include "rocksdb/utilities/options_util.h"
+#include "rocksjni/object_map.h"
 #include "rocksjni/portal.h"
 
 void build_column_family_descriptor_list(
@@ -66,10 +68,12 @@ void Java_org_rocksdb_OptionsUtil_loadLatestOptions__Ljava_lang_String_2JJLjava_
     return;
   }
   std::vector<ROCKSDB_NAMESPACE::ColumnFamilyDescriptor> cf_descs;
+  auto db_opts = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::DBOptions>(jdb_opts_handle);
+
   ROCKSDB_NAMESPACE::Status s = ROCKSDB_NAMESPACE::LoadLatestOptions(
       db_path, reinterpret_cast<ROCKSDB_NAMESPACE::Env*>(jenv_handle),
-      reinterpret_cast<ROCKSDB_NAMESPACE::DBOptions*>(jdb_opts_handle),
-      &cf_descs, ignore_unknown_options);
+      db_opts.get(), &cf_descs, ignore_unknown_options);
   if (!s.ok()) {
     // error, raise an exception
     ROCKSDB_NAMESPACE::RocksDBExceptionJni::ThrowNew(env, s);
@@ -96,10 +100,10 @@ void Java_org_rocksdb_OptionsUtil_loadLatestOptions__JLjava_lang_String_2JLjava_
   std::vector<ROCKSDB_NAMESPACE::ColumnFamilyDescriptor> cf_descs;
   auto* config_options =
       reinterpret_cast<ROCKSDB_NAMESPACE::ConfigOptions*>(cfg_handle);
-  auto* db_options =
-      reinterpret_cast<ROCKSDB_NAMESPACE::DBOptions*>(jdb_opts_handle);
+  auto db_opts = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::DBOptions>(jdb_opts_handle);
   ROCKSDB_NAMESPACE::Status s = ROCKSDB_NAMESPACE::LoadLatestOptions(
-      *config_options, db_path, db_options, &cf_descs);
+      *config_options, db_path, db_opts.get(), &cf_descs);
   if (!s.ok()) {
     // error, raise an exception
     ROCKSDB_NAMESPACE::RocksDBExceptionJni::ThrowNew(env, s);
@@ -124,10 +128,11 @@ void Java_org_rocksdb_OptionsUtil_loadOptionsFromFile__Ljava_lang_String_2JJLjav
     return;
   }
   std::vector<ROCKSDB_NAMESPACE::ColumnFamilyDescriptor> cf_descs;
+  auto db_opts = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::DBOptions>(jdb_opts_handle);
   ROCKSDB_NAMESPACE::Status s = ROCKSDB_NAMESPACE::LoadOptionsFromFile(
       opts_file_name, reinterpret_cast<ROCKSDB_NAMESPACE::Env*>(jenv_handle),
-      reinterpret_cast<ROCKSDB_NAMESPACE::DBOptions*>(jdb_opts_handle),
-      &cf_descs, ignore_unknown_options);
+      db_opts.get(), &cf_descs, ignore_unknown_options);
   if (!s.ok()) {
     // error, raise an exception
     ROCKSDB_NAMESPACE::RocksDBExceptionJni::ThrowNew(env, s);
@@ -154,10 +159,10 @@ void Java_org_rocksdb_OptionsUtil_loadOptionsFromFile__JLjava_lang_String_2JLjav
   std::vector<ROCKSDB_NAMESPACE::ColumnFamilyDescriptor> cf_descs;
   auto* config_options =
       reinterpret_cast<ROCKSDB_NAMESPACE::ConfigOptions*>(cfg_handle);
-  auto* db_options =
-      reinterpret_cast<ROCKSDB_NAMESPACE::DBOptions*>(jdb_opts_handle);
+  auto db_opts = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::DBOptions>(jdb_opts_handle);
   ROCKSDB_NAMESPACE::Status s = ROCKSDB_NAMESPACE::LoadOptionsFromFile(
-      *config_options, opts_file_name, db_options, &cf_descs);
+      *config_options, opts_file_name, db_opts.get(), &cf_descs);
   if (!s.ok()) {
     // error, raise an exception
     ROCKSDB_NAMESPACE::RocksDBExceptionJni::ThrowNew(env, s);

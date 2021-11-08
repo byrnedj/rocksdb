@@ -7,9 +7,11 @@
 // calling c++ ROCKSDB_NAMESPACE::WriteBatchWithIndex methods from Java side.
 
 #include "rocksdb/utilities/write_batch_with_index.h"
+
 #include "include/org_rocksdb_WBWIRocksIterator.h"
 #include "include/org_rocksdb_WriteBatchWithIndex.h"
 #include "rocksdb/comparator.h"
+#include "rocksjni/object_map.h"
 #include "rocksjni/portal.h"
 
 /*
@@ -564,11 +566,12 @@ jbyteArray JNICALL Java_org_rocksdb_WriteBatchWithIndex_getFromBatch__JJ_3BI(
     jbyteArray jkey, jint jkey_len) {
   auto* wbwi =
       reinterpret_cast<ROCKSDB_NAMESPACE::WriteBatchWithIndex*>(jwbwi_handle);
-  auto* dbopt = reinterpret_cast<ROCKSDB_NAMESPACE::DBOptions*>(jdbopt_handle);
+  auto db_opts = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::DBOptions>(jdbopt_handle);
 
-  auto getter = [&wbwi, &dbopt](const ROCKSDB_NAMESPACE::Slice& key,
-                                std::string* value) {
-    return wbwi->GetFromBatch(*dbopt, key, value);
+  auto getter = [&wbwi, &db_opts](const ROCKSDB_NAMESPACE::Slice& key,
+                                  std::string* value) {
+    return wbwi->GetFromBatch(*db_opts, key, value);
   };
 
   return ROCKSDB_NAMESPACE::JniUtil::v_op(getter, env, jkey, jkey_len);
@@ -584,13 +587,14 @@ jbyteArray Java_org_rocksdb_WriteBatchWithIndex_getFromBatch__JJ_3BIJ(
     jbyteArray jkey, jint jkey_len, jlong jcf_handle) {
   auto* wbwi =
       reinterpret_cast<ROCKSDB_NAMESPACE::WriteBatchWithIndex*>(jwbwi_handle);
-  auto* dbopt = reinterpret_cast<ROCKSDB_NAMESPACE::DBOptions*>(jdbopt_handle);
+  auto db_opts = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::DBOptions>(jdbopt_handle);
   auto* cf_handle =
       reinterpret_cast<ROCKSDB_NAMESPACE::ColumnFamilyHandle*>(jcf_handle);
 
-  auto getter = [&wbwi, &cf_handle, &dbopt](const ROCKSDB_NAMESPACE::Slice& key,
-                                            std::string* value) {
-    return wbwi->GetFromBatch(cf_handle, *dbopt, key, value);
+  auto getter = [&wbwi, &cf_handle, &db_opts](
+                    const ROCKSDB_NAMESPACE::Slice& key, std::string* value) {
+    return wbwi->GetFromBatch(cf_handle, *db_opts, key, value);
   };
 
   return ROCKSDB_NAMESPACE::JniUtil::v_op(getter, env, jkey, jkey_len);

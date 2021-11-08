@@ -8,6 +8,7 @@
 // from Java side.
 
 #include <jni.h>
+
 #include <string>
 
 #include "include/org_rocksdb_SstFileReader.h"
@@ -15,6 +16,7 @@
 #include "rocksdb/env.h"
 #include "rocksdb/options.h"
 #include "rocksdb/sst_file_reader.h"
+#include "rocksjni/object_map.h"
 #include "rocksjni/portal.h"
 
 /*
@@ -25,8 +27,8 @@
 jlong Java_org_rocksdb_SstFileReader_newSstFileReader(JNIEnv * /*env*/,
                                                       jclass /*jcls*/,
                                                       jlong joptions) {
-  auto *options =
-      reinterpret_cast<const ROCKSDB_NAMESPACE::Options *>(joptions);
+  auto options = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::Options>(joptions);
   ROCKSDB_NAMESPACE::SstFileReader *sst_file_reader =
       new ROCKSDB_NAMESPACE::SstFileReader(*options);
   return reinterpret_cast<jlong>(sst_file_reader);

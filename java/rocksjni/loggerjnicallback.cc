@@ -6,11 +6,13 @@
 // This file implements the callback "bridge" between Java and C++ for
 // ROCKSDB_NAMESPACE::Logger.
 
-#include "include/org_rocksdb_Logger.h"
+#include "rocksjni/loggerjnicallback.h"
 
 #include <cstdarg>
 #include <cstdio>
-#include "rocksjni/loggerjnicallback.h"
+
+#include "include/org_rocksdb_Logger.h"
+#include "rocksjni/object_map.h"
 #include "rocksjni/portal.h"
 
 namespace ROCKSDB_NAMESPACE {
@@ -231,7 +233,8 @@ jlong Java_org_rocksdb_Logger_createNewLoggerOptions(JNIEnv* env, jobject jobj,
       new ROCKSDB_NAMESPACE::LoggerJniCallback(env, jobj));
 
   // set log level
-  auto* options = reinterpret_cast<ROCKSDB_NAMESPACE::Options*>(joptions);
+  auto options = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::Options>(joptions);
   sptr_logger->get()->SetInfoLogLevel(options->info_log_level);
 
   return reinterpret_cast<jlong>(sptr_logger);
@@ -249,8 +252,8 @@ jlong Java_org_rocksdb_Logger_createNewLoggerDbOptions(JNIEnv* env,
       new ROCKSDB_NAMESPACE::LoggerJniCallback(env, jobj));
 
   // set log level
-  auto* db_options =
-      reinterpret_cast<ROCKSDB_NAMESPACE::DBOptions*>(jdb_options);
+  auto db_options = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::DBOptions>(jdb_options);
   sptr_logger->get()->SetInfoLogLevel(db_options->info_log_level);
 
   return reinterpret_cast<jlong>(sptr_logger);

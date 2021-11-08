@@ -8,6 +8,7 @@
 // from Java side.
 
 #include <jni.h>
+
 #include <string>
 
 #include "include/org_rocksdb_SstFileWriter.h"
@@ -15,6 +16,7 @@
 #include "rocksdb/env.h"
 #include "rocksdb/options.h"
 #include "rocksdb/sst_file_writer.h"
+#include "rocksjni/object_map.h"
 #include "rocksjni/portal.h"
 
 /*
@@ -41,8 +43,8 @@ jlong Java_org_rocksdb_SstFileWriter_newSstFileWriter__JJJB(
   }
   auto *env_options =
       reinterpret_cast<const ROCKSDB_NAMESPACE::EnvOptions *>(jenvoptions);
-  auto *options =
-      reinterpret_cast<const ROCKSDB_NAMESPACE::Options *>(joptions);
+  auto options = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::Options>(joptions);
   ROCKSDB_NAMESPACE::SstFileWriter *sst_file_writer =
       new ROCKSDB_NAMESPACE::SstFileWriter(*env_options, *options, comparator);
   return reinterpret_cast<jlong>(sst_file_writer);
@@ -59,8 +61,8 @@ jlong Java_org_rocksdb_SstFileWriter_newSstFileWriter__JJ(JNIEnv * /*env*/,
                                                           jlong joptions) {
   auto *env_options =
       reinterpret_cast<const ROCKSDB_NAMESPACE::EnvOptions *>(jenvoptions);
-  auto *options =
-      reinterpret_cast<const ROCKSDB_NAMESPACE::Options *>(joptions);
+  auto options = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::Options>(joptions);
   ROCKSDB_NAMESPACE::SstFileWriter *sst_file_writer =
       new ROCKSDB_NAMESPACE::SstFileWriter(*env_options, *options);
   return reinterpret_cast<jlong>(sst_file_writer);

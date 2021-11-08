@@ -6,12 +6,14 @@
 // This file implements the "bridge" between Java and C++
 // for ROCKSDB_NAMESPACE::Transaction.
 
+#include "rocksdb/utilities/transaction.h"
+
 #include <jni.h>
+
 #include <functional>
 
 #include "include/org_rocksdb_Transaction.h"
-
-#include "rocksdb/utilities/transaction.h"
+#include "rocksjni/object_map.h"
 #include "rocksjni/portal.h"
 
 using namespace std::placeholders;
@@ -1401,8 +1403,8 @@ void Java_org_rocksdb_Transaction_setWriteOptions(JNIEnv* /*env*/,
                                                   jlong jhandle,
                                                   jlong jwrite_options_handle) {
   auto* txn = reinterpret_cast<ROCKSDB_NAMESPACE::Transaction*>(jhandle);
-  auto* write_options =
-      reinterpret_cast<ROCKSDB_NAMESPACE::WriteOptions*>(jwrite_options_handle);
+  auto write_options = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::WriteOptions>(jwrite_options_handle);
   txn->SetWriteOptions(*write_options);
 }
 

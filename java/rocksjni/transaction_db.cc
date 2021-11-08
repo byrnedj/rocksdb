@@ -6,17 +6,18 @@
 // This file implements the "bridge" between Java and C++
 // for ROCKSDB_NAMESPACE::TransactionDB.
 
+#include "rocksdb/utilities/transaction_db.h"
+
 #include <jni.h>
+
 #include <functional>
 #include <memory>
 #include <utility>
 
 #include "include/org_rocksdb_TransactionDB.h"
-
 #include "rocksdb/options.h"
 #include "rocksdb/utilities/transaction.h"
-#include "rocksdb/utilities/transaction_db.h"
-
+#include "rocksjni/object_map.h"
 #include "rocksjni/portal.h"
 
 /*
@@ -27,8 +28,8 @@
 jlong Java_org_rocksdb_TransactionDB_open__JJLjava_lang_String_2(
     JNIEnv* env, jclass, jlong joptions_handle,
     jlong jtxn_db_options_handle, jstring jdb_path) {
-  auto* options =
-      reinterpret_cast<ROCKSDB_NAMESPACE::Options*>(joptions_handle);
+  auto options = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::Options>(joptions_handle);
   auto* txn_db_options =
       reinterpret_cast<ROCKSDB_NAMESPACE::TransactionDBOptions*>(
           jtxn_db_options_handle);
@@ -107,25 +108,25 @@ jlongArray Java_org_rocksdb_TransactionDB_open__JJLjava_lang_String_2_3_3B_3J(
       return nullptr;
     }
     const std::string cf_name(reinterpret_cast<char*>(jcf_name), jcf_name_len);
-    const ROCKSDB_NAMESPACE::ColumnFamilyOptions* cf_options =
-        reinterpret_cast<ROCKSDB_NAMESPACE::ColumnFamilyOptions*>(jco[i]);
+    const auto cf_opts = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+        ROCKSDB_NAMESPACE::ColumnFamilyOptions>(jco[i]);
     column_families.push_back(
-        ROCKSDB_NAMESPACE::ColumnFamilyDescriptor(cf_name, *cf_options));
+        ROCKSDB_NAMESPACE::ColumnFamilyDescriptor(cf_name, *cf_opts));
 
     env->ReleaseByteArrayElements(jcn_ba, jcf_name, JNI_ABORT);
     env->DeleteLocalRef(jcn);
   }
   env->ReleaseLongArrayElements(jcolumn_options_handles, jco, JNI_ABORT);
 
-  auto* db_options =
-      reinterpret_cast<ROCKSDB_NAMESPACE::DBOptions*>(jdb_options_handle);
+  auto db_opts = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::DBOptions>(jdb_options_handle);
   auto* txn_db_options =
       reinterpret_cast<ROCKSDB_NAMESPACE::TransactionDBOptions*>(
           jtxn_db_options_handle);
   std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*> handles;
   ROCKSDB_NAMESPACE::TransactionDB* tdb = nullptr;
   const ROCKSDB_NAMESPACE::Status s = ROCKSDB_NAMESPACE::TransactionDB::Open(
-      *db_options, *txn_db_options, db_path, column_families, &handles, &tdb);
+      *db_opts, *txn_db_options, db_path, column_families, &handles, &tdb);
 
   // check if open operation was successful
   if (s.ok()) {
@@ -188,10 +189,9 @@ void Java_org_rocksdb_TransactionDB_closeDatabase(
 jlong Java_org_rocksdb_TransactionDB_beginTransaction__JJ(
     JNIEnv*, jobject, jlong jhandle, jlong jwrite_options_handle) {
   auto* txn_db = reinterpret_cast<ROCKSDB_NAMESPACE::TransactionDB*>(jhandle);
-  auto* write_options =
-      reinterpret_cast<ROCKSDB_NAMESPACE::WriteOptions*>(jwrite_options_handle);
-  ROCKSDB_NAMESPACE::Transaction* txn =
-      txn_db->BeginTransaction(*write_options);
+  auto w_opts = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::WriteOptions>(jwrite_options_handle);
+  ROCKSDB_NAMESPACE::Transaction* txn = txn_db->BeginTransaction(*w_opts);
   return reinterpret_cast<jlong>(txn);
 }
 
@@ -204,12 +204,12 @@ jlong Java_org_rocksdb_TransactionDB_beginTransaction__JJJ(
     JNIEnv*, jobject, jlong jhandle, jlong jwrite_options_handle,
     jlong jtxn_options_handle) {
   auto* txn_db = reinterpret_cast<ROCKSDB_NAMESPACE::TransactionDB*>(jhandle);
-  auto* write_options =
-      reinterpret_cast<ROCKSDB_NAMESPACE::WriteOptions*>(jwrite_options_handle);
+  auto w_opts = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::WriteOptions>(jwrite_options_handle);
   auto* txn_options = reinterpret_cast<ROCKSDB_NAMESPACE::TransactionOptions*>(
       jtxn_options_handle);
   ROCKSDB_NAMESPACE::Transaction* txn =
-      txn_db->BeginTransaction(*write_options, *txn_options);
+      txn_db->BeginTransaction(*w_opts, *txn_options);
   return reinterpret_cast<jlong>(txn);
 }
 
@@ -222,13 +222,13 @@ jlong Java_org_rocksdb_TransactionDB_beginTransaction_1withOld__JJJ(
     JNIEnv*, jobject, jlong jhandle, jlong jwrite_options_handle,
     jlong jold_txn_handle) {
   auto* txn_db = reinterpret_cast<ROCKSDB_NAMESPACE::TransactionDB*>(jhandle);
-  auto* write_options =
-      reinterpret_cast<ROCKSDB_NAMESPACE::WriteOptions*>(jwrite_options_handle);
+  auto w_opts = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::WriteOptions>(jwrite_options_handle);
   auto* old_txn =
       reinterpret_cast<ROCKSDB_NAMESPACE::Transaction*>(jold_txn_handle);
   ROCKSDB_NAMESPACE::TransactionOptions txn_options;
   ROCKSDB_NAMESPACE::Transaction* txn =
-      txn_db->BeginTransaction(*write_options, txn_options, old_txn);
+      txn_db->BeginTransaction(*w_opts, txn_options, old_txn);
 
   // RocksJava relies on the assumption that
   // we do not allocate a new Transaction object
@@ -247,14 +247,14 @@ jlong Java_org_rocksdb_TransactionDB_beginTransaction_1withOld__JJJJ(
     JNIEnv*, jobject, jlong jhandle, jlong jwrite_options_handle,
     jlong jtxn_options_handle, jlong jold_txn_handle) {
   auto* txn_db = reinterpret_cast<ROCKSDB_NAMESPACE::TransactionDB*>(jhandle);
-  auto* write_options =
-      reinterpret_cast<ROCKSDB_NAMESPACE::WriteOptions*>(jwrite_options_handle);
+  auto w_opts = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::WriteOptions>(jwrite_options_handle);
   auto* txn_options = reinterpret_cast<ROCKSDB_NAMESPACE::TransactionOptions*>(
       jtxn_options_handle);
   auto* old_txn =
       reinterpret_cast<ROCKSDB_NAMESPACE::Transaction*>(jold_txn_handle);
   ROCKSDB_NAMESPACE::Transaction* txn =
-      txn_db->BeginTransaction(*write_options, *txn_options, old_txn);
+      txn_db->BeginTransaction(*w_opts, *txn_options, old_txn);
 
   // RocksJava relies on the assumption that
   // we do not allocate a new Transaction object

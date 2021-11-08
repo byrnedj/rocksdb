@@ -6,14 +6,14 @@
 // This file implements the "bridge" between Java and C++
 // for ROCKSDB_NAMESPACE::TransactionDB.
 
+#include "rocksdb/utilities/optimistic_transaction_db.h"
+
 #include <jni.h>
 
 #include "include/org_rocksdb_OptimisticTransactionDB.h"
-
 #include "rocksdb/options.h"
-#include "rocksdb/utilities/optimistic_transaction_db.h"
 #include "rocksdb/utilities/transaction.h"
-
+#include "rocksjni/object_map.h"
 #include "rocksjni/portal.h"
 
 /*
@@ -29,8 +29,8 @@ jlong Java_org_rocksdb_OptimisticTransactionDB_open__JLjava_lang_String_2(
     return 0;
   }
 
-  auto* options =
-      reinterpret_cast<ROCKSDB_NAMESPACE::Options*>(joptions_handle);
+  auto options = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::Options>(joptions_handle);
   ROCKSDB_NAMESPACE::OptimisticTransactionDB* otdb = nullptr;
   ROCKSDB_NAMESPACE::Status s =
       ROCKSDB_NAMESPACE::OptimisticTransactionDB::Open(*options, db_path,

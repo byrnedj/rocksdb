@@ -11,6 +11,7 @@
 
 #include "include/org_rocksdb_EnvOptions.h"
 #include "rocksdb/env.h"
+#include "rocksjni/object_map.h"
 
 #define ENV_OPTIONS_SET_BOOL(_jhandle, _opt)                          \
   reinterpret_cast<ROCKSDB_NAMESPACE::EnvOptions *>(_jhandle)->_opt = \
@@ -45,9 +46,9 @@ jlong Java_org_rocksdb_EnvOptions_newEnvOptions__(
  */
 jlong Java_org_rocksdb_EnvOptions_newEnvOptions__J(
     JNIEnv*, jclass, jlong jdboptions_handle) {
-  auto *db_options =
-      reinterpret_cast<ROCKSDB_NAMESPACE::DBOptions *>(jdboptions_handle);
-  auto *env_opt = new ROCKSDB_NAMESPACE::EnvOptions(*db_options);
+  auto db_opts = ROCKSDB_NAMESPACE::jni::JniObjectMap::GetObject<
+      ROCKSDB_NAMESPACE::DBOptions>(jdboptions_handle);
+  auto *env_opt = new ROCKSDB_NAMESPACE::EnvOptions(*db_opts);
   return reinterpret_cast<jlong>(env_opt);
 }
 
