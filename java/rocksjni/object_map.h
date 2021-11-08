@@ -6,8 +6,9 @@
 
 #pragma once
 
-#include <atomic>
 #include <jni.h>
+
+#include <atomic>
 #include <memory>
 #include <unordered_map>
 
@@ -17,7 +18,7 @@
 
 namespace ROCKSDB_NAMESPACE {
 namespace jni {
-  
+
 class JniObjectMap {
  public:
   template <typename T>
@@ -27,7 +28,7 @@ class JniObjectMap {
     MutexLock l(&mutex_);
     objects_[next] = std::static_pointer_cast<void>(shared);
     return static_cast<jlong>(next);
-  }  
+  }
 
   template <typename T>
   static jlong AddObject() {
@@ -44,7 +45,7 @@ class JniObjectMap {
       return nullptr;
     }
   }
-  
+
   template <typename T>
   static bool FreeObject(jlong id) {
     MutexLock l(&mutex_);
@@ -57,11 +58,12 @@ class JniObjectMap {
       return false;
     }
   }
- private:  
+
+ private:
   static std::unordered_map<jlong, std::shared_ptr<void>> objects_;
   static std::atomic_ulong counter_;
   static port::Mutex mutex_;
 };
 
-} // namespace jni
-} // namespace ROCKSDB_NAMESPACE
+}  // namespace jni
+}  // namespace ROCKSDB_NAMESPACE
