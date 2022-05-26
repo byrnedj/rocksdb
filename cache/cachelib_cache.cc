@@ -26,16 +26,6 @@ namespace cachelib {
 CacheLibCache::CacheLibCache(size_t capacity, int num_shard_bits,
                    bool strict_capacity_limit,
                    CacheMetadataChargePolicy metadata_charge_policy) {
-  //num_shards_ = 1 << num_shard_bits;
-  //shards_ = reinterpret_cast<CacheLibCacheShard*>(
-  //    port::cacheline_aligned_alloc(sizeof(CacheLibCacheShard) * num_shards_));
-  //size_t per_shard = (capacity + (num_shards_ - 1)) / num_shards_;
-  
-  //for (int i = 0; i < num_shards_; i++) {
-    //new (&shards_[i])
-    //    CacheLibCacheShard(per_shard, strict_capacity_limit, metadata_charge_policy,
-    //                  /* max_upper_hash_bits */ 32 - num_shard_bits);
-  //}
   CacheConfig config;
   config
       .setCacheSize(capacity) // 1GB
@@ -45,6 +35,8 @@ CacheLibCache::CacheLibCache(size_t capacity, int num_shard_bits,
                                                         // million items
       .validate(); // will throw if bad config
   cache = std::make_unique<CacheLibAllocator>(config);
+  defaultPool =
+      cache->addPool("default", cache->getCacheMemoryStats().cacheSize);
 }
 
 CacheLibCache::~CacheLibCache() {
@@ -53,26 +45,28 @@ CacheLibCache::~CacheLibCache() {
 
 bool CacheLibCache::Ref(Handle* handle) 
 {
-    return false;
+  CacheLibHandle* e = reinterpret_cast<CacheLibHandle*>(handle);
+  e->handle->incRef();
+  return true;
 }
 
 
 void CacheLibCache::Erase(const Slice& key) {
+    cache->remove(key);
 }
 
 void* CacheLibCache::Value(Handle* handle) {
-  return reinterpret_cast<const CacheLibHandle*>(handle)->value;
+  return reinterpret_cast<CacheLibHandle*>(handle)->handle->getMemory();
 }
 
 
 //TODO: what is charge (size of data + header)
 size_t CacheLibCache::GetCharge(Handle* handle) const {
-  return reinterpret_cast<const CacheLibHandle*>(handle)->charge;
+  return reinterpret_cast<const CacheLibHandle*>(handle)->handle->getSize();
 }
 
 Cache::DeleterFn CacheLibCache::GetDeleter(Handle* handle) const {
-  auto h = reinterpret_cast<const CacheLibHandle*>(handle);
-  return h->deleter;
+  throw std::runtime_error("NOT SUPPORTED");
 }
 
 void CacheLibCache::DisownData() {
@@ -81,18 +75,28 @@ void CacheLibCache::DisownData() {
 
 void CacheLibCache::EraseUnRefEntries()
 {
-
+  // XXX
 }
 
 Status CacheLibCache::Insert(const Slice& key, void* value, size_t charge,
                         DeleterFn deleter, Handle** handle, Priority priority)
 {
+  auto c_handle = cache->allocate(defaultPool, key, charge);
+  if (!c_handle) return status::NoSpace();
+
+  std::memcpy(handle->getMemory(), value, charge);
+
+  cache->insertOrReplace(c_handle);
+
+  *handle = reinterpret_cast<CacheLibHandle*>(new CacheLibHandle{std::move(c_handle)});
+  if (!handle) return status::NoSpace();
+
   return Status::OK();
 }
 
 Cache::Handle* CacheLibCache::Lookup(const Slice& key, Statistics* stats)
 {
-  return nullptr;
+  // XXX: stats
 }
 
 bool CacheLibCache::Release(Handle* handle, bool erase_if_last_ref)

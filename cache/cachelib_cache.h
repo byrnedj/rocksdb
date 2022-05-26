@@ -28,7 +28,6 @@ using CacheConfig = typename CacheLibAllocator::Config;
 using CacheKey = typename CacheLibAllocator::Key;
 using CacheItemHandle = typename CacheLibAllocator::WriteHandle;
 
-
 struct CacheLibHandle {
   CacheItemHandle handle;
 };
@@ -89,7 +88,7 @@ class CacheLibCache : public Cache {
  private:
   std::atomic<size_t> id = 0;
   std::unique_ptr<CacheLibAllocator> cache;
-  int num_shards_ = 0;
+  ::facebook::cachelib::PoolId defaultPool;
 };
 
 }  // namespace facebook 
