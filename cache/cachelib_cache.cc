@@ -84,6 +84,11 @@ void CacheLibCache::EraseUnRefEntries()
 
 }
 
+void CacheLibCache::ApplyToAllEntries()
+{
+
+}
+
 Status CacheLibCache::Insert(const Slice& key, void* value, size_t charge,
                         DeleterFn deleter, Handle** handle, Priority priority)
 {

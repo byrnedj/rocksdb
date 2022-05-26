@@ -133,11 +133,14 @@ class CacheLibCache : public Cache {
 
   virtual size_t GetCapacity() const {return 0;};
 
+  using Cache::Lookup;
   Status Insert(const Slice& key, void* value, size_t charge,
                         DeleterFn deleter, Handle** handle = nullptr,
                         Priority priority = Priority::LOW);
   using Cache::Lookup;
   Handle* Lookup(const Slice& key, Statistics* stats = nullptr);
+  
+  using Cache::Lookup;
   bool Release(Handle* handle, bool erase_if_last_ref = false);
 
   size_t GetUsage() const { return 0; }
