@@ -21,6 +21,7 @@
 
 namespace ROCKSDB_NAMESPACE {
 namespace facebook {
+namespace cachelib {
 
 using CacheLibCache = rocksdb::facebook::cachelib::LruAllocator; // or Lru2QAllocator, or TinyLFUAllocator
 using CacheConfig = typename CacheLibCache::Config;
@@ -123,6 +124,7 @@ class CacheLibCache : public Cache {
 };
 
 }  // namespace facebook 
+}
 
 std::shared_ptr<Cache> CacheLibCache(
     size_t capacity, int num_shard_bits = -1,

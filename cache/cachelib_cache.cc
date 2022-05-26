@@ -21,6 +21,7 @@
 
 namespace ROCKSDB_NAMESPACE {
 namespace facebook {
+namespace cachelib {
 
 CacheLibCache::CacheLibCache(size_t capacity, int num_shard_bits,
                    bool strict_capacity_limit,
@@ -74,6 +75,7 @@ void CacheLibCache::DisownData() {
   // Leak data only if that won't generate an ASAN/valgrind warning.
 }
 
+}  // 
 }  // namespace facebook
 
 std::shared_ptr<Cache> CacheLibCache(
