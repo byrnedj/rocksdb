@@ -23,10 +23,10 @@ namespace ROCKSDB_NAMESPACE {
 namespace facebook {
 namespace cachelib {
 
-using CacheLibCache = ::cachelib::LruAllocator; // or Lru2QAllocator, or TinyLFUAllocator
-using CacheConfig = typename CacheLibCache::Config;
-using CacheKey = typename CacheLibCache::Key;
-using CacheItemHandle = typename CacheLibCache::ReadHandle;
+using CacheLibAllocator = ::facebook::cachelib::LruAllocator; // or Lru2QAllocator, or TinyLFUAllocator
+using CacheConfig = typename CacheLibAllocator::Config;
+using CacheKey = typename CacheLibAllocator::Key;
+using CacheItemHandle = typename CacheLibAllocator::ReadHandle;
 
 
 struct CacheLibHandle {
@@ -118,8 +118,34 @@ class CacheLibCache : public Cache {
   DeleterFn GetDeleter(Handle* handle) const override;
   void DisownData() override;
 
+  //  virtual const char* Name() const = 0;
+  // virtual Status Insert(const Slice& key, void* value, size_t charge,
+  // virtual Handle* Lookup(const Slice& key, Statistics* stats = nullptr) = 0;
+  // virtual bool Ref(Handle* handle) = 0;
+  // virtual bool Release(Handle* handle, bool erase_if_last_ref = false) = 0;
+  // virtual void* Value(Handle* handle) = 0;
+  // virtual void Erase(const Slice& key) = 0;
+  // virtual uint64_t NewId() = 0;
+  // virtual void SetCapacity(size_t capacity) = 0;
+  // virtual void SetStrictCapacityLimit(bool strict_capacity_limit) = 0;
+  // virtual bool HasStrictCapacityLimit() const = 0;
+  // virtual size_t GetCapacity() const = 0;
+  // virtual size_t GetUsage() const = 0;
+  // virtual size_t GetUsage(Handle* handle) const = 0;
+  // virtual size_t GetPinnedUsage() const = 0;
+  // virtual size_t GetCharge(Handle* handle) const = 0;
+  // virtual DeleterFn GetDeleter(Handle* handle) const = 0;
+  // virtual void EraseUnRefEntries() = 0;
+  // virtual std::string GetPrintableOptions() const { return ""; }
+  // virtual Status Insert(const Slice& key, void* value,
+  // virtual Handle* Lookup(const Slice& key, const CacheItemHelper* /*helper_cb*/,
+  // virtual bool Release(Handle* handle, bool /*useful*/,
+  // virtual bool IsReady(Handle* /*handle*/) { return true; }
+  // virtual void Wait(Handle* /*handle*/) {}
+  // virtual void WaitAll(std::vector<Handle*>& /*handles*/) {}
+
  private:
-  CacheLibCache *cache;
+  std::unique_ptr<CacheLibAllocator> cache;
   int num_shards_ = 0;
 };
 

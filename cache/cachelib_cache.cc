@@ -44,7 +44,7 @@ CacheLibCache::CacheLibCache(size_t capacity, int num_shard_bits,
           {25 /* bucket power */, 10 /* lock power */}) // assuming caching 20
                                                         // million items
       .validate(); // will throw if bad config
-  cache = std::make_unique<Cache>(config);
+  cache = std::make_unique<CacheLibAllocator>(config);
 }
 
 CacheLibCache::~CacheLibCache() {
