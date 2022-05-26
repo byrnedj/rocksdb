@@ -120,7 +120,7 @@ class CacheLibCache : public Cache {
   //  virtual const char* Name() const = 0;
   // virtual Status Insert(const Slice& key, void* value, size_t charge,
   // virtual Handle* Lookup(const Slice& key, Statistics* stats = nullptr) = 0;
-  // virtual bool Ref(Handle* handle) = 0;
+  bool Ref(Handle* handle);
   // virtual bool Release(Handle* handle, bool erase_if_last_ref = false) = 0;
   // virtual void* Value(Handle* handle) = 0;
   // virtual void Erase(const Slice& key) = 0;
