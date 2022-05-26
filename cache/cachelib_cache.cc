@@ -50,6 +50,25 @@ CacheLibCache::CacheLibCache(size_t capacity, int num_shard_bits,
 CacheLibCache::~CacheLibCache() {
 }
 
+Status Insert(const Slice& key, void* value, size_t charge,
+                      DeleterFn deleter, Handle** handle, Priority priority) {
+    return Status::Incomplete; 
+}
+
+Handle* Lookup(const Slice& key, Statistics* stats = nullptr) {
+    return nullptr;
+}
+
+bool Ref(Handle* handle) {
+    return false;
+}
+
+bool Release(Handle* handle, bool erase_if_last_ref = false) {
+    return false;
+}
+
+void Erase(const Slice& key) {
+}
 
 void* CacheLibCache::Value(Handle* handle) {
   return reinterpret_cast<const CacheLibHandle*>(handle)->value;
