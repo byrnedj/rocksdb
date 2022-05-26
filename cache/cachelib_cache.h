@@ -143,6 +143,7 @@ class CacheLibCache : public Cache {
   using Cache::Lookup;
   bool Release(Handle* handle, bool erase_if_last_ref = false);
 
+  void ApplyToAllEntries();
   size_t GetUsage() const { return 0; }
 
   // Returns the memory size for a specific entry in the cache.
