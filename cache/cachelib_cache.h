@@ -26,82 +26,11 @@ namespace cachelib {
 using CacheLibAllocator = ::facebook::cachelib::LruAllocator; // or Lru2QAllocator, or TinyLFUAllocator
 using CacheConfig = typename CacheLibAllocator::Config;
 using CacheKey = typename CacheLibAllocator::Key;
-using CacheItemHandle = typename CacheLibAllocator::ReadHandle;
+using CacheItemHandle = typename CacheLibAllocator::WriteHandle;
 
 
 struct CacheLibHandle {
   CacheItemHandle handle;
-
-  Cache::DeleterFn deleter;
-  size_t charge;  // TODO(opt): Only allow uint32_t?
-  void* value;
-/*
-  LRUHandle* next_hash;
-  LRUHandle* next;
-  LRUHandle* prev;
-  size_t key_length;
-  // The hash of key(). Used for fast sharding and comparisons.
-  uint32_t hash;
-  // The number of external refs to this entry. The cache itself is not counted.
-  uint32_t refs;
-
-  enum Flags : uint8_t {
-    // Whether this entry is referenced by the hash table.
-    IN_CACHE = (1 << 0),
-  };
-  uint8_t flags;
-
-  // Beginning of the key (MUST BE THE LAST FIELD IN THIS STRUCT!)
-  char key_data[1];
-
-  Slice key() const { return Slice(key_data, key_length); }
-
-  // Increase the reference count by 1.
-  void Ref() { refs++; }
-
-  // Just reduce the reference count by 1. Return true if it was last reference.
-  bool Unref() {
-    assert(refs > 0);
-    refs--;
-    return refs == 0;
-  }
-
-  // Return true if there are external refs, false otherwise.
-  bool HasRefs() const { return refs > 0; }
-
-  bool InCache() const { return flags & IN_CACHE; }
-
-  void SetInCache(bool in_cache) {
-    if (in_cache) {
-      flags |= IN_CACHE;
-    } else {
-      flags &= ~IN_CACHE;
-    }
-  }
-
-  void Free() {
-    assert(refs == 0);
-    if (deleter) {
-      (*deleter)(key(), value);
-    }
-    delete[] reinterpret_cast<char*>(this);
-  }
-
-  // Calculate the memory usage by metadata.
-  inline size_t CalcTotalCharge(
-      CacheMetadataChargePolicy metadata_charge_policy) {
-    size_t meta_charge = 0;
-    if (metadata_charge_policy == kFullChargeCacheMetadata) {
-#ifdef ROCKSDB_MALLOC_USABLE_SIZE
-      meta_charge += malloc_usable_size(static_cast<void*>(this));
-#else
-      // This is the size that is used when a new handle is created.
-      meta_charge += sizeof(LRUHandle) - 1 + key_length;
-#endif
-    }
-    return charge + meta_charge;
-  }
-  */
 };
 
 class CacheLibCache : public Cache {
@@ -123,15 +52,15 @@ class CacheLibCache : public Cache {
   bool Ref(Handle* handle);
   void Erase(const Slice& key);
 
-  uint64_t NewId() { return 0; }
+  uint64_t NewId() { return id.fetch_add(1); }
 
-  void SetCapacity(size_t capacity) {};
+  void SetCapacity(size_t capacity) { // XXX };
 
-  void SetStrictCapacityLimit(bool strict_capacity_limit) {} 
+  void SetStrictCapacityLimit(bool strict_capacity_limit) { // not supported by cachelib? } 
 
   bool HasStrictCapacityLimit() const { return false; }
 
-  virtual size_t GetCapacity() const {return 0;};
+  size_t GetCapacity() const {return 0;};
 
   using Cache::Insert;
   Status Insert(const Slice& key, void* value, size_t charge,
@@ -158,6 +87,7 @@ class CacheLibCache : public Cache {
   void EraseUnRefEntries();
 
  private:
+  std::atomic<size_t> id = 0;
   std::unique_ptr<CacheLibAllocator> cache;
   int num_shards_ = 0;
 };
