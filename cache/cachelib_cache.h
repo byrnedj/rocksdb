@@ -107,6 +107,7 @@ struct CacheLibHandle {
 class CacheLibCache : public Cache {
 
  public:
+
   CacheLibCache(size_t capacity, int num_shard_bits, bool strict_capacity_limit,
            CacheMetadataChargePolicy metadata_charge_policy =
                kDontChargeCacheMetadata);
@@ -119,7 +120,6 @@ class CacheLibCache : public Cache {
 
   //  virtual const char* Name() const = 0;
   // virtual Status Insert(const Slice& key, void* value, size_t charge,
-  Handle* Lookup(const Slice& key, Statistics* stats = nullptr);
   bool Ref(Handle* handle);
   void Erase(const Slice& key);
 
@@ -136,6 +136,7 @@ class CacheLibCache : public Cache {
   Status Insert(const Slice& key, void* value, size_t charge,
                         DeleterFn deleter, Handle** handle = nullptr,
                         Priority priority = Priority::LOW);
+  using Cache::Lookup;
   Handle* Lookup(const Slice& key, Statistics* stats = nullptr);
   bool Release(Handle* handle, bool erase_if_last_ref = false);
 
