@@ -599,6 +599,7 @@ set(SOURCES
         cache/clock_cache.cc
         cache/compressed_secondary_cache.cc
         cache/fast_lru_cache.cc
+        cache/cachelib_cache.cc
         cache/lru_cache.cc
         cache/sharded_cache.cc
         db/arena_wrapped_db_iter.cc
