@@ -84,15 +84,10 @@ void CacheLibCache::EraseUnRefEntries()
 
 }
 
-void CacheLibCache::ApplyToAllEntries()
-{
-
-}
-
 Status CacheLibCache::Insert(const Slice& key, void* value, size_t charge,
                         DeleterFn deleter, Handle** handle, Priority priority)
 {
-  return Status::OK;
+  return Status::OK();
 }
 
 Cache::Handle* CacheLibCache::Lookup(const Slice& key, Statistics* stats)

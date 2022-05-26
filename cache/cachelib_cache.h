@@ -133,17 +133,20 @@ class CacheLibCache : public Cache {
 
   virtual size_t GetCapacity() const {return 0;};
 
-  using Cache::Lookup;
+  using Cache::Insert;
   Status Insert(const Slice& key, void* value, size_t charge,
                         DeleterFn deleter, Handle** handle = nullptr,
                         Priority priority = Priority::LOW);
   using Cache::Lookup;
   Handle* Lookup(const Slice& key, Statistics* stats = nullptr);
   
-  using Cache::Lookup;
+  using Cache::Release;
   bool Release(Handle* handle, bool erase_if_last_ref = false);
 
-  void ApplyToAllEntries();
+  void ApplyToAllEntries(
+      const std::function<void(const Slice& key, void* value, size_t charge,
+                               DeleterFn deleter)>& callback,
+      const ApplyToAllEntriesOptions& opts) {};
   size_t GetUsage() const { return 0; }
 
   // Returns the memory size for a specific entry in the cache.
@@ -152,6 +155,7 @@ class CacheLibCache : public Cache {
   // Returns the memory size for the entries in use by the system
   size_t GetPinnedUsage() const { return 0; }
 
+  void EraseUnRefEntries();
 
  private:
   std::unique_ptr<CacheLibAllocator> cache;
