@@ -23,7 +23,7 @@ namespace ROCKSDB_NAMESPACE {
 namespace facebook {
 namespace cachelib_cache {
 
-using CacheLibCache = cachelib::LruAllocator; // or Lru2QAllocator, or TinyLFUAllocator
+using CacheLibCache = rocksdb::facebook:cachelib::LruAllocator; // or Lru2QAllocator, or TinyLFUAllocator
 using CacheConfig = typename CacheLibCache::Config;
 using CacheKey = typename CacheLibCache::Key;
 using CacheItemHandle = typename CacheLibCache::ReadHandle;
@@ -72,7 +72,8 @@ Cache::DeleterFn CacheLibCache::GetDeleter(Handle* handle) const {
 }
 
 uint32_t CacheLibCache::GetHash(Handle* handle) const {
-  return reinterpret_cast<const CacheLibHandle*>(handle)->hash;
+  //return reinterpret_cast<const CacheLibHandle*>(handle)->hash;
+  return 0;
 }
 
 void CacheLibCache::DisownData() {
@@ -85,13 +86,7 @@ void CacheLibCache::DisownData() {
 std::shared_ptr<Cache> CacheLibCache(
     size_t capacity, int num_shard_bits, bool strict_capacity_limit,
     CacheMetadataChargePolicy metadata_charge_policy) {
-  if (num_shard_bits >= 20) {
-    return nullptr;  // The cache cannot be sharded into too many fine pieces.
-  }
-  if (num_shard_bits < 0) {
-    num_shard_bits = GetDefaultCacheShardBits(capacity);
-  }
-  return std::make_shared<cachelib_cache::CacheLibCache>(
+  return std::make_shared<rocksdb::facebook::cachelib_cache::CacheLibCache>(
       capacity, num_shard_bits, strict_capacity_limit, metadata_charge_policy);
 }
 
