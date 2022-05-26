@@ -119,11 +119,9 @@ class CacheLibCache : public Cache {
 
   //  virtual const char* Name() const = 0;
   // virtual Status Insert(const Slice& key, void* value, size_t charge,
-  // virtual Handle* Lookup(const Slice& key, Statistics* stats = nullptr) = 0;
+  Handle* Lookup(const Slice& key, Statistics* stats = nullptr);
   bool Ref(Handle* handle);
-  // virtual bool Release(Handle* handle, bool erase_if_last_ref = false) = 0;
-  // virtual void* Value(Handle* handle) = 0;
-  // virtual void Erase(const Slice& key) = 0;
+  void Erase(const Slice& key);
 
   uint64_t NewId() { return 0; }
 
@@ -135,11 +133,11 @@ class CacheLibCache : public Cache {
 
   virtual size_t GetCapacity() const {return 0;};
 
-  //Status Insert(const Slice& key, void* value, size_t charge,
-  //                      DeleterFn deleter, Handle** handle = nullptr,
-  //                      Priority priority = Priority::LOW);
-  //Handle* Lookup(const Slice& key, Statistics* stats = nullptr);
-  //bool Release(Handle* handle, bool erase_if_last_ref = false);
+  Status Insert(const Slice& key, void* value, size_t charge,
+                        DeleterFn deleter, Handle** handle = nullptr,
+                        Priority priority = Priority::LOW);
+  Handle* Lookup(const Slice& key, Statistics* stats = nullptr);
+  bool Release(Handle* handle, bool erase_if_last_ref = false);
 
   size_t GetUsage() const { return 0; }
 
