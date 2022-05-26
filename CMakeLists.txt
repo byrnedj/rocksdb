@@ -1044,9 +1044,10 @@ string(REGEX REPLACE "[^0-9: /-]+" "" GIT_DATE "${GIT_DATE}")
 set(BUILD_VERSION_CC ${CMAKE_BINARY_DIR}/build_version.cc)
 configure_file(util/build_version.cc.in ${BUILD_VERSION_CC} @ONLY)
 
+find_package(cachelib CONFIG REQUIRED)
 add_library(${ROCKSDB_STATIC_LIB} STATIC ${SOURCES} ${BUILD_VERSION_CC})
 target_link_libraries(${ROCKSDB_STATIC_LIB} PRIVATE
-  ${THIRDPARTY_LIBS} ${SYSTEM_LIBS})
+    ${THIRDPARTY_LIBS} cachelib ${SYSTEM_LIBS})
 
 if(ROCKSDB_BUILD_SHARED)
   add_library(${ROCKSDB_SHARED_LIB} SHARED ${SOURCES} ${BUILD_VERSION_CC})
