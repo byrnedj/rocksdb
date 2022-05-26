@@ -23,11 +23,10 @@ namespace ROCKSDB_NAMESPACE {
 namespace facebook {
 namespace cachelib_cache {
 
-using Cache = cachelib::LruAllocator; // or Lru2QAllocator, or TinyLFUAllocator
-using CacheConfig = typename Cache::Config;
-using CacheKey = typename Cache::Key;
-using CacheItemHandle = typename Cache::ReadHandle;
-
+using CacheLibCache = cachelib::LruAllocator; // or Lru2QAllocator, or TinyLFUAllocator
+using CacheConfig = typename CacheLibCache::Config;
+using CacheKey = typename CacheLibCache::Key;
+using CacheItemHandle = typename CacheLibCache::ReadHandle;
 
 CacheLibCache::CacheLibCache(size_t capacity, int num_shard_bits,
                    bool strict_capacity_limit,
@@ -61,6 +60,7 @@ void* CacheLibCache::Value(Handle* handle) {
   return reinterpret_cast<const CacheLibHandle*>(handle)->value;
 }
 
+
 //TODO: what is charge (size of data + header)
 size_t CacheLibCache::GetCharge(Handle* handle) const {
   return reinterpret_cast<const CacheLibHandle*>(handle)->charge;
@@ -77,13 +77,10 @@ uint32_t CacheLibCache::GetHash(Handle* handle) const {
 
 void CacheLibCache::DisownData() {
   // Leak data only if that won't generate an ASAN/valgrind warning.
-  if (!kMustFreeHeapAllocations) {
-    shards_ = nullptr;
-    num_shards_ = 0;
-  }
 }
 
 }  // namespace cachelib_cache
+}  // namespace facebook
 
 std::shared_ptr<Cache> CacheLibCache(
     size_t capacity, int num_shard_bits, bool strict_capacity_limit,

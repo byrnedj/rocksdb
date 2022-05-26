@@ -23,22 +23,22 @@ namespace ROCKSDB_NAMESPACE {
 namespace facebook {
 namespace cachelib_cache {
 
-using Cache = cachelib::LruAllocator; // or Lru2QAllocator, or TinyLFUAllocator
-using CacheConfig = typename Cache::Config;
-using CacheKey = typename Cache::Key;
-using CacheItemHandle = typename Cache::ReadHandle;
+using CacheLibCache = cachelib::LruAllocator; // or Lru2QAllocator, or TinyLFUAllocator
+using CacheConfig = typename CacheLibCache::Config;
+using CacheKey = typename CacheLibCache::Key;
+using CacheItemHandle = typename CacheLibCache::ReadHandle;
 // An experimental (under development!) alternative to LRUCache
 
 struct CacheLibHandle {
   CacheItemHandle handle;
 
-/*
-  void* value;
   Cache::DeleterFn deleter;
+  size_t charge;  // TODO(opt): Only allow uint32_t?
+  void* value;
+/*
   LRUHandle* next_hash;
   LRUHandle* next;
   LRUHandle* prev;
-  size_t charge;  // TODO(opt): Only allow uint32_t?
   size_t key_length;
   // The hash of key(). Used for fast sharding and comparisons.
   uint32_t hash;
