@@ -114,7 +114,6 @@ class CacheLibCache : public Cache {
   const char* Name() const override { return "CacheLibCache"; }
   void* Value(Handle* handle) override;
   size_t GetCharge(Handle* handle) const override;
-  uint32_t GetHash(Handle* handle) const override;
   DeleterFn GetDeleter(Handle* handle) const override;
   void DisownData() override;
 
@@ -125,24 +124,31 @@ class CacheLibCache : public Cache {
   // virtual bool Release(Handle* handle, bool erase_if_last_ref = false) = 0;
   // virtual void* Value(Handle* handle) = 0;
   // virtual void Erase(const Slice& key) = 0;
-  // virtual uint64_t NewId() = 0;
-  // virtual void SetCapacity(size_t capacity) = 0;
-  // virtual void SetStrictCapacityLimit(bool strict_capacity_limit) = 0;
-  // virtual bool HasStrictCapacityLimit() const = 0;
-  // virtual size_t GetCapacity() const = 0;
-  // virtual size_t GetUsage() const = 0;
-  // virtual size_t GetUsage(Handle* handle) const = 0;
-  // virtual size_t GetPinnedUsage() const = 0;
-  // virtual size_t GetCharge(Handle* handle) const = 0;
-  // virtual DeleterFn GetDeleter(Handle* handle) const = 0;
-  // virtual void EraseUnRefEntries() = 0;
-  // virtual std::string GetPrintableOptions() const { return ""; }
-  // virtual Status Insert(const Slice& key, void* value,
-  // virtual Handle* Lookup(const Slice& key, const CacheItemHelper* /*helper_cb*/,
-  // virtual bool Release(Handle* handle, bool /*useful*/,
-  // virtual bool IsReady(Handle* /*handle*/) { return true; }
-  // virtual void Wait(Handle* /*handle*/) {}
-  // virtual void WaitAll(std::vector<Handle*>& /*handles*/) {}
+
+  uint64_t NewId() { return 0; }
+
+  void SetCapacity(size_t capacity) {};
+
+  void SetStrictCapacityLimit(bool strict_capacity_limit) {} 
+
+  bool HasStrictCapacityLimit() const { return false; }
+
+  virtual size_t GetCapacity() const {return 0;};
+
+  Status Insert(const Slice& key, void* value, size_t charge,
+                        DeleterFn deleter, Handle** handle = nullptr,
+                        Priority priority = Priority::LOW);
+  Handle* Lookup(const Slice& key, Statistics* stats = nullptr);
+  bool Release(Handle* handle, bool erase_if_last_ref = false);
+
+  size_t GetUsage() const { return 0; }
+
+  // Returns the memory size for a specific entry in the cache.
+  size_t GetUsage(Handle* handle) const { return 0; }
+
+  // Returns the memory size for the entries in use by the system
+  size_t GetPinnedUsage() const { return 0; }
+
 
  private:
   std::unique_ptr<CacheLibAllocator> cache;

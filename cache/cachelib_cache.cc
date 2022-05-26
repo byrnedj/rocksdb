@@ -85,13 +85,30 @@ Cache::DeleterFn CacheLibCache::GetDeleter(Handle* handle) const {
   return h->deleter;
 }
 
-uint32_t CacheLibCache::GetHash(Handle* handle) const {
-  //return reinterpret_cast<const CacheLibHandle*>(handle)->hash;
-  return 0;
-}
-
 void CacheLibCache::DisownData() {
   // Leak data only if that won't generate an ASAN/valgrind warning.
+}
+
+void CacheLibCache::EraseUnRefEntries()
+{
+
+}
+
+Status CacheLibCache::Insert(const Slice& key, void* value, size_t charge,
+                        DeleterFn deleter, Handle** handle = nullptr,
+                        Priority priority = Priority::LOW)
+{
+  return Status::OK;
+}
+
+Cache::Handle* CacheLibCache::Lookup(const Slice& key, Statistics* stats)
+{
+  return nullptr;
+}
+
+bool CacheLibCache::Release(Handle* handle, bool erase_if_last_ref)
+{
+  return false;
 }
 
 }  // 
@@ -100,7 +117,7 @@ void CacheLibCache::DisownData() {
 std::shared_ptr<Cache> CacheLibCache(
     size_t capacity, int num_shard_bits, bool strict_capacity_limit,
     CacheMetadataChargePolicy metadata_charge_policy) {
-  return std::make_shared<rocksdb::facebook::CacheLibCache>(
+  return std::make_shared<facebook::cachelib::CacheLibCache>(
       capacity, num_shard_bits, strict_capacity_limit, metadata_charge_policy);
 }
 
