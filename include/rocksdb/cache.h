@@ -144,7 +144,7 @@ extern std::shared_ptr<Cache> CacheLibCache(
     CacheMetadataChargePolicy metadata_charge_policy =
         kDefaultCacheMetadataChargePolicy);
 
-extern std::shared_ptr<Cache> CacheLibCache(const CacheLibCacheOptions& cache_opts);
+extern std::shared_ptr<Cache> CacheLibCache(const LRUCacheOptions& cache_opts);
 
 // EXPERIMENTAL
 // Options structure for configuring a SecondaryCache instance based on
