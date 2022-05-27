@@ -36,11 +36,7 @@ struct CacheLibHandle {
 class CacheLibCache : public Cache {
 
  public:
-
-  CacheLibCache();
-  CacheLibCache(size_t capacity, int num_shard_bits, bool strict_capacity_limit,
-           CacheMetadataChargePolicy metadata_charge_policy =
-               kDontChargeCacheMetadata);
+  CacheLibCache(size_t capacity);
   ~CacheLibCache() override;
   static const char* kClassName() { return "CacheLibCache"; }
   const char* Name() const override { return kClassName(); }
@@ -99,14 +95,6 @@ class CacheLibCache : public Cache {
   std::unique_ptr<CacheLibAllocator> cache;
   ::facebook::cachelib::PoolId defaultPool;
 };
-
+}  // namespace cachelib
 }  // namespace facebook 
-}
-
-std::shared_ptr<Cache> CacheLibCache(
-    size_t capacity, int num_shard_bits = -1,
-    bool strict_capacity_limit = false,
-    CacheMetadataChargePolicy metadata_charge_policy =
-        kDefaultCacheMetadataChargePolicy);
-
 }  // namespace ROCKSDB_NAMESPACE

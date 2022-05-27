@@ -9,6 +9,7 @@
 
 #include "rocksdb/cache.h"
 
+#include "cache/cachelib_cache.h"
 #include "cache/clock_cache.h"
 #include "cache/fast_lru_cache.h"
 #include "cache/lru_cache.h"
@@ -46,6 +47,13 @@ static int RegisterBuiltinCache(ObjectLibrary& library,
           *errmsg = s.ToString();
         }
         guard->reset(clock.release());
+        return guard->get();
+      });
+  library.AddFactory<Cache>(
+      CacheLibCache::kClassName(),
+      [](const std::string& /*uri*/, std::unique_ptr<Cache>* guard,
+         std::string* errmsg) {
+	guard->reset(new CacheLibCache(1024*1024)); // Default to 1MB cache
         return guard->get();
       });
   return 1;
