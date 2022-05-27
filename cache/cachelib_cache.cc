@@ -63,7 +63,7 @@ CacheLibCache::CacheLibCache(size_t capacity):
     .usePosixForShm()
   .configureMemoryTiers({
          ::facebook::cachelib::MemoryTierCacheConfig::fromShm().setRatio(1),
-         ::facebook::cachelib::MemoryTierCacheConfig::fromFile("/mnt/pmem/file1").setRatio(2)});
+         ::facebook::cachelib::MemoryTierCacheConfig::fromFile("/mnt/pmem/file1").setRatio(1)});
     RegisterOptions("", &config_, &cachelib_option_map);
 }
 
@@ -71,7 +71,7 @@ Status CacheLibCache::PrepareOptions(const ConfigOptions& /*options*/) {
   if (cache == nullptr) {
     try {
       config_.validate(); // Will throw if bad config
-      cache = std::make_unique<CacheLibAllocator>(config_);
+      cache = std::make_unique<CacheLibAllocator>(CacheLibAllocator::SharedMemNew, config_);
       defaultPool =
 	cache->addPool("default", cache->getCacheMemoryStats().cacheSize);
     } catch (const std::exception& e) {
@@ -100,14 +100,22 @@ void CacheLibCache::Erase(const Slice& key) {
 }
 
 void* CacheLibCache::Value(Handle* handle) {
-  char *mem = reinterpret_cast<char*>(reinterpret_cast<CacheLibHandle*>(handle)->handle->getMemory());
+  auto& h = reinterpret_cast<const CacheLibHandle*>(handle)->handle;
+  if (!h)
+    return nullptr; 
+
+  char *mem = reinterpret_cast<char*>(h->getMemory());
   return mem + sizeof(DeleterFn);
 }
 
 
 //TODO: what is charge (size of data + header)
 size_t CacheLibCache::GetCharge(Handle* handle) const {
-  return reinterpret_cast<const CacheLibHandle*>(handle)->handle->getSize() - sizeof(DeleterFn);
+  auto &h = reinterpret_cast<const CacheLibHandle*>(handle)->handle;
+  if (!h)
+    return 0;  
+
+  return h->getSize() - sizeof(DeleterFn);
 }
 
 Cache::DeleterFn CacheLibCache::GetDeleter(Handle* handle) const {
@@ -146,10 +154,12 @@ Status CacheLibCache::Insert(const Slice& key, void* value, size_t charge,
   cache->insertOrReplace(c_handle);
 
   auto h = new CacheLibHandle;
+  if (!h) return Status::NoSpace();
+
   h->handle = std::move(c_handle);
 
-  *handle = reinterpret_cast<Handle*>(h);
-  if (!handle) return Status::NoSpace();
+  if (handle)
+    *handle = reinterpret_cast<Handle*>(h);
 
   return Status::OK();
 }
@@ -160,6 +170,9 @@ Cache::Handle* CacheLibCache::Lookup(const Slice& key, Statistics* stats)
 
   folly::StringPiece k(key.data(), key.size());
   auto c_handle = cache->findToWrite(k);
+
+  if(!c_handle)
+    return nullptr;
 
   auto h = new CacheLibHandle;
   h->handle = std::move(c_handle);
@@ -177,11 +190,18 @@ bool CacheLibCache::Release(Handle* handle, bool erase_if_last_ref)
 
 bool CacheLibCache::IsReady(Handle* handle)
 {
+  auto &h = reinterpret_cast<const CacheLibHandle*>(handle)->handle;
+  if (!h)
+    return false;
+
   return reinterpret_cast<CacheLibHandle*>(handle)->handle.isReady();
 }
 
 void CacheLibCache::Wait(Handle* handle)
 {
+  auto &h = reinterpret_cast<const CacheLibHandle*>(handle)->handle;
+  if (!h)
+    return; 
   reinterpret_cast<CacheLibHandle*>(handle)->handle.wait();
 }
 

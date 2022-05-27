@@ -89,6 +89,8 @@ class CacheLibCache : public Cache {
           char *mem = reinterpret_cast<char*>(item.getMemory());
           DeleterFn deleter = *reinterpret_cast<DeleterFn*>(mem);
           callback(k, mem + sizeof(deleter), item.getSize() - sizeof(deleter), deleter);
+
+          ++it;
         }
       }
 
