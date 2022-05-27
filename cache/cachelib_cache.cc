@@ -23,10 +23,19 @@ namespace ROCKSDB_NAMESPACE {
 namespace facebook {
 namespace cachelib {
 
-CacheLibCache::CacheLibCache(size_t capacity, int num_shard_bits,
-                   bool strict_capacity_limit,
+CacheLibCache::CacheLibCache(size_t capacity, double high_pri_pool_ratio,
                    CacheMetadataChargePolicy metadata_charge_policy):
                    id(0) {
+
+  //params for multi-tier
+  //tier 1 file path + ratio
+  //tier n file path + ratio 5
+  //.configureMemoryTiers( {
+  //        MemoryTierCacheConfig::fromFile("/dev/shm/file1").setRatio(1),
+  //        MemoryTierCacheConfig::fromFile("/mnt/pmem1/file1").setRatio(2)) })
+  // params in general
+  // capacity - uint in bytes
+  //
   CacheConfig config;
   config
       .setCacheSize(capacity) // 1GB
@@ -39,6 +48,7 @@ CacheLibCache::CacheLibCache(size_t capacity, int num_shard_bits,
   defaultPool =
       cache->addPool("default", cache->getCacheMemoryStats().cacheSize);
 }
+
 
 CacheLibCache::~CacheLibCache() {
 }
@@ -126,11 +136,20 @@ bool CacheLibCache::Release(Handle* handle, bool erase_if_last_ref)
 }  // 
 }  // namespace facebook
 
-std::shared_ptr<Cache> CacheLibCache(
-    size_t capacity, int num_shard_bits, bool strict_capacity_limit,
+
+std::shared_ptr<Cache> NewCacheLibCache(const LRUCacheOptions& cache_opts) {
+  return std::make_shared<facebook::cachelib::CacheLibCache(
+      cache_opts.capacity, cache_opts.high_pri_pool_ratio,
+      cache_opts.metadata_charge_policy);
+}
+
+std::shared_ptr<Cache> NewCacheLibCache(
+    size_t capacity, 
+    double high_pri_pool_ratio,
     CacheMetadataChargePolicy metadata_charge_policy) {
-  return std::make_shared<facebook::cachelib::CacheLibCache>(
-      capacity, num_shard_bits, strict_capacity_limit, metadata_charge_policy);
+  return std::make_shared<facebook::cachelib::CacheLibCache(
+      capacity, high_pri_pool_ratio,
+      metadata_charge_policy);
 }
 
 }  // namespace ROCKSDB_NAMESPACE

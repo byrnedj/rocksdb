@@ -130,10 +130,10 @@ extern std::shared_ptr<Cache> NewLRUCache(const LRUCacheOptions& cache_opts);
 // Create a new CacheLib cache with a fixed size capacity. 
 //  User can also
 // set percentage of the cache reserves for high priority entries via
-extern std::shared_ptr<Cache> CacheLibCache(
+extern std::shared_ptr<Cache> NewCacheLibCache(
     size_t capacity, double high_pri_pool_ratio = 0.5);
 
-extern std::shared_ptr<Cache> CacheLibCache(const LRUCacheOptions& cache_opts);
+extern std::shared_ptr<Cache> NewCacheLibCache(const LRUCacheOptions& cache_opts);
 
 // EXPERIMENTAL
 // Options structure for configuring a SecondaryCache instance based on
