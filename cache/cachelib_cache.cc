@@ -59,6 +59,7 @@ CacheLibCache::CacheLibCache(size_t capacity):
     .setCacheName("CacheLibCache")
     .setAccessConfig(
 		     {25 /* bucket power */, 10 /* lock power */}) // assuming caching 20
+    .enableCachePersistence("/tmp")
     .usePosixForShm()
   .configureMemoryTiers({
          ::facebook::cachelib::MemoryTierCacheConfig::fromShm().setRatio(1),
