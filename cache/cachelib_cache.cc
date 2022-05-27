@@ -16,35 +16,58 @@
 #include "monitoring/perf_context_imp.h"
 #include "monitoring/statistics.h"
 #include "port/lang.h"
+#include "rocksdb/utilities/options_type.h"
+
 #include "util/mutexlock.h"
 #include "cachelib/allocator/CacheAllocator.h"
 
 namespace ROCKSDB_NAMESPACE {
+namespace {
+static std::unordered_map<std::string, OptionTypeInfo> cachelib_option_map = {
+     {"capacity",
+      {0, OptionType::kUnknown, OptionVerificationType::kNormal, OptionTypeFlags::kDontCompare}.
+         .SetParseFunc([](const ConfigOptions& opts,
+                          const std::string& /*name*/, const std::string& value,
+                          void* addr) {
+           auto config = static_cast<CacheConfig*>(addr);
+	   auto capacity = ParseSizeT(value);
+	   config->setCacheSize(capacity);
+	   return Status::OK();
+	 })
+         .SetSerializeFunc([](const ConfigOptions& opts,
+                          const std::string& /*name*/, const std::string& value,
+                          void* addr) {
+           const auto config = static_cast<CacheConfig*>(addr);
+	   auto capacity = config->GetCacheSize();
+	   *value = std::to_string(capacity);
+	   return Status::OK();
+	 })
+	 },
+};
+} // namespace 
+  
 namespace facebook {
 namespace cachelib {
+CacheLibCache::CacheLibCache(size_t capacity) {
+  config_
+    .setCacheSize(capacity) // 1GB
+    .setCacheName("CacheLibCache")
+    .setAccessConfig(
+		     {25 /* bucket power */, 10 /* lock power */}) // assuming caching 20
+    // million items
+    RegisterOptions("", &config_, &cachelib_option_map);
+}
 
-CacheLibCache::CacheLibCache(size_t capacity, int num_shard_bits,
-                   bool strict_capacity_limit,
-                   CacheMetadataChargePolicy metadata_charge_policy) {
-  //num_shards_ = 1 << num_shard_bits;
-  //shards_ = reinterpret_cast<CacheLibCacheShard*>(
-  //    port::cacheline_aligned_alloc(sizeof(CacheLibCacheShard) * num_shards_));
-  //size_t per_shard = (capacity + (num_shards_ - 1)) / num_shards_;
-  
-  //for (int i = 0; i < num_shards_; i++) {
-    //new (&shards_[i])
-    //    CacheLibCacheShard(per_shard, strict_capacity_limit, metadata_charge_policy,
-    //                  /* max_upper_hash_bits */ 32 - num_shard_bits);
-  //}
-  CacheConfig config;
-  config
-      .setCacheSize(capacity) // 1GB
-      .setCacheName("CacheLibCache")
-      .setAccessConfig(
-          {25 /* bucket power */, 10 /* lock power */}) // assuming caching 20
-                                                        // million items
-      .validate(); // will throw if bad config
-  cache = std::make_unique<CacheLibAllocator>(config);
+Status CacheLibCache::PrepareOptions(const ConfigOptions& /*options*/) {
+  if (cache == nullptr) {
+    try {
+      config_.validate(); // Will throw if bad config
+      cache = std::make_unique<CacheLibAllocator>(config_);
+    } catch (const std::exception& e) {
+      return Status::InvalidArgument(e.what());
+    }
+  }
+  return Status::OK();
 }
 
 CacheLibCache::~CacheLibCache() {

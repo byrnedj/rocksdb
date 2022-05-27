@@ -37,11 +37,15 @@ class CacheLibCache : public Cache {
 
  public:
 
+  CacheLibCache();
   CacheLibCache(size_t capacity, int num_shard_bits, bool strict_capacity_limit,
            CacheMetadataChargePolicy metadata_charge_policy =
                kDontChargeCacheMetadata);
   ~CacheLibCache() override;
-  const char* Name() const override { return "CacheLibCache"; }
+  static const char* kClassName() { return "CacheLibCache"; }
+  const char* Name() const override { return kClassName(); }
+  Status PrepareOptions(const ConfigOptions& opts) override;
+  
   void* Value(Handle* handle) override;
   size_t GetCharge(Handle* handle) const override;
   DeleterFn GetDeleter(Handle* handle) const override;
@@ -88,6 +92,7 @@ class CacheLibCache : public Cache {
 
  private:
   std::atomic<size_t> id = 0;
+  CacheLibAllocator::Config config_;
   std::unique_ptr<CacheLibAllocator> cache;
   int num_shards_ = 0;
 };
