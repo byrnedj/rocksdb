@@ -25,7 +25,8 @@ namespace cachelib {
 
 CacheLibCache::CacheLibCache(size_t capacity, int num_shard_bits,
                    bool strict_capacity_limit,
-                   CacheMetadataChargePolicy metadata_charge_policy) {
+                   CacheMetadataChargePolicy metadata_charge_policy):
+                   id(0) {
   CacheConfig config;
   config
       .setCacheSize(capacity) // 1GB
@@ -88,7 +89,7 @@ Status CacheLibCache::Insert(const Slice& key, void* value, size_t charge,
 
   cache->insertOrReplace(c_handle);
 
-  *handle = reinterpret_cast<CacheLibHandle*>(new CacheLibHandle{std::move(c_handle)});
+  *handle = reinterpret_cast<Handle*>(new CacheLibHandle{std::move(c_handle)});
   if (!handle) return status::NoSpace();
 
   return Status::OK();
@@ -97,11 +98,17 @@ Status CacheLibCache::Insert(const Slice& key, void* value, size_t charge,
 Cache::Handle* CacheLibCache::Lookup(const Slice& key, Statistics* stats)
 {
   // XXX: stats
+
+  auto c_handle = cache->find(key);
+  return reinterpret_cast<Handle*>(new CacheLibHandle{std::move(c_handle)});
 }
+
+uint64_t CacheLibCache::NewId() { return id.fetch_add(1); }
 
 bool CacheLibCache::Release(Handle* handle, bool erase_if_last_ref)
 {
-  return false;
+  reinterpret_cast<CacheLibHandle*>(handle)->handle->decRef();
+  return true;
 }
 
 }  // 
