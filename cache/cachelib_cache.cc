@@ -175,20 +175,47 @@ Status CacheLibCache::Insert(const Slice& key, void* value, size_t charge,
   if (!value)
     return Status::OK();
 
-  deleter = [](const Slice&, void*) {};
-
   auto size = charge + sizeof(deleter);
 
   folly::StringPiece k(key.data(), key.size());
   auto c_handle = cache->allocate(defaultPool, k, size);
   if (!c_handle) return Status::NoSpace();
 
+  deleter = [](const Slice &, void*) {};
+
   new (c_handle->getMemory()) DeleterFn(deleter);
   char *mem = reinterpret_cast<char*>(c_handle->getMemory());
   std::memcpy(mem + sizeof(deleter), value, charge);
 
-  delete (char*) value;
+  delete (char*)value;
 
+  cache->insertOrReplace(c_handle);
+
+  auto h = new CacheLibHandle;
+  if (!h) return Status::NoSpace();
+
+  h->handle = std::move(c_handle);
+
+  if (handle)
+    *handle = reinterpret_cast<Handle*>(h);
+
+  return Status::OK();
+}
+
+Status CacheLibCache::Insert2(const Slice& key, size_t charge, F_type &&f, Handle **handle)
+{
+  auto size = charge + sizeof(DeleterFn);
+
+  folly::StringPiece k(key.data(), key.size());
+  auto c_handle = cache->allocate(defaultPool, k, size);
+  if (!c_handle) return Status::NoSpace();
+
+  auto deleter = [](const Slice&, void*) {};
+
+  new (c_handle->getMemory()) DeleterFn(deleter);
+  char *mem = reinterpret_cast<char*>(c_handle->getMemory());
+
+  f(mem + sizeof(deleter), charge);
   cache->insertOrReplace(c_handle);
 
   auto h = new CacheLibHandle;

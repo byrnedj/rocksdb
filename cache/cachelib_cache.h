@@ -72,6 +72,8 @@ class CacheLibCache : public Cache {
   Status Insert(const Slice& key, void* value, size_t charge,
                         DeleterFn deleter, Handle** handle = nullptr,
                         Priority priority = Priority::LOW);
+
+  Status Insert2(const Slice& key, size_t charge, F_type&& f, Handle **handle = nullptr);
   using Cache::Lookup;
   Handle* Lookup(const Slice& key, Statistics* stats = nullptr);
   

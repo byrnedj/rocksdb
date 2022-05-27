@@ -216,15 +216,6 @@ struct KeyGen {
   }
 };
 
-char* createValue(Random64& rnd) {
-  char* rv = new char[FLAGS_value_bytes];
-  // Fill with some filler data, and take some CPU time
-  for (uint32_t i = 0; i < FLAGS_value_bytes; i += 8) {
-    EncodeFixed64(rv + i, rnd.Next());
-  }
-  return rv;
-}
-
 // Callbacks for secondary cache
 size_t SizeFn(void* /*obj*/) { return FLAGS_value_bytes; }
 
@@ -324,8 +315,12 @@ class CacheBench {
     Random64 rnd(1);
     KeyGen keygen;
     for (uint64_t i = 0; i < 2 * FLAGS_cache_size; i += FLAGS_value_bytes) {
-      cache_->Insert(keygen.GetRand(rnd, max_key_, max_log_), createValue(rnd),
-                     &helper1, FLAGS_value_bytes);
+      cache_->Insert2(keygen.GetRand(rnd, max_key_, max_log_), FLAGS_value_bytes,[&](void *value, size_t size)
+{
+  for (uint32_t iii = 0; iii < FLAGS_value_bytes; iii += 8) {
+    EncodeFixed64(((char*)value) + iii, rnd.Next());
+  }
+});
     }
   }
 
@@ -545,8 +540,13 @@ class CacheBench {
                              FLAGS_value_bytes);
         } else {
           // do insert
-          cache_->Insert(key, createValue(thread->rnd), &helper2,
-                         FLAGS_value_bytes, &handle);
+          cache_->Insert2(key, FLAGS_value_bytes, [&](void *value, size_t size)
+{
+  for (uint32_t iii = 0; iii < FLAGS_value_bytes; iii += 8) {
+    EncodeFixed64(((char*)value) + iii, thread->rnd.Next());
+  }
+},
+                         &handle);
         }
       } else if (random_op < insert_threshold_) {
         if (handle) {
@@ -554,8 +554,13 @@ class CacheBench {
           handle = nullptr;
         }
         // do insert
-        cache_->Insert(key, createValue(thread->rnd), &helper3,
-                       FLAGS_value_bytes, &handle);
+        cache_->Insert2(key, FLAGS_value_bytes, [&](void *value, size_t size)
+{
+  for (uint32_t iii = 0; iii < FLAGS_value_bytes; iii += 8) {
+    EncodeFixed64(((char*)value) + iii, thread->rnd.Next());
+  }
+}
+                       , &handle);
       } else if (random_op < lookup_threshold_) {
         if (handle) {
           cache_->Release(handle);

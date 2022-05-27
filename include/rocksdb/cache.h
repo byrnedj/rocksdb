@@ -350,6 +350,9 @@ class Cache : public Customizable {
   // REQUIRES: handle must have been returned by a method on *this.
   virtual bool Release(Handle* handle, bool erase_if_last_ref = false) = 0;
 
+  using F_type = std::function<void(void*, size_t)>;
+  virtual Status Insert2(const Slice& key, size_t charge, F_type&& f, Handle **handle = nullptr) { return Status::OK(); }
+
   // Return the value encapsulated in a handle returned by a
   // successful Lookup().
   // REQUIRES: handle must not have been released yet.
