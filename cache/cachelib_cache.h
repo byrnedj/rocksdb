@@ -55,7 +55,7 @@ class CacheLibCache : public Cache {
   uint64_t NewId();
 
   void SetCapacity(size_t capacity) {
-    // XXX
+    throw std::runtime_error("XXX");
   }
 
   void SetStrictCapacityLimit(bool strict_capacity_limit) { // not supported by cachelib?
@@ -63,7 +63,9 @@ class CacheLibCache : public Cache {
 
   bool HasStrictCapacityLimit() const { return false; }
 
-  size_t GetCapacity() const {return 0;};
+  size_t GetCapacity() const {
+    return cache->getCacheMemoryStats().cacheSize;
+  };
 
   using Cache::Insert;
   Status Insert(const Slice& key, void* value, size_t charge,
@@ -78,14 +80,27 @@ class CacheLibCache : public Cache {
   void ApplyToAllEntries(
       const std::function<void(const Slice& key, void* value, size_t charge,
                                DeleterFn deleter)>& callback,
-      const ApplyToAllEntriesOptions& opts) {};
-  size_t GetUsage() const { return 0; }
+      const ApplyToAllEntriesOptions& opts) {
+        auto it = cache->begin();
+        while(it != cache->end()) {
+          auto &item = *it;
+          Slice k(item.getKey().data(), item.getKey().size());
+          char *mem = reinterpret_cast<char*>(item.getMemory());
+          DeleterFn deleter = *reinterpret_cast<DeleterFn*>(mem);
+          callback(k, mem + sizeof(deleter), item.getSize() - sizeof(deleter), deleter);
+        }
+      }
+
+  size_t GetUsage() const {
+    return GetCapacity();
+    // XXX
+   }
 
   // Returns the memory size for a specific entry in the cache.
-  size_t GetUsage(Handle* handle) const { return 0; }
+  size_t GetUsage(Handle* handle) const { return GetCharge(handle); }
 
   // Returns the memory size for the entries in use by the system
-  size_t GetPinnedUsage() const { return 0; }
+  size_t GetPinnedUsage() const { return GetUsage(); }
 
   void EraseUnRefEntries();
 

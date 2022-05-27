@@ -101,17 +101,19 @@ void CacheLibCache::Erase(const Slice& key) {
 }
 
 void* CacheLibCache::Value(Handle* handle) {
-  return reinterpret_cast<CacheLibHandle*>(handle)->handle->getMemory();
+  char *mem = reinterpret_cast<char*>(reinterpret_cast<CacheLibHandle*>(handle)->handle->getMemory());
+  return mem + sizeof(DeleterFn);
 }
 
 
 //TODO: what is charge (size of data + header)
 size_t CacheLibCache::GetCharge(Handle* handle) const {
-  return reinterpret_cast<const CacheLibHandle*>(handle)->handle->getSize();
+  return reinterpret_cast<const CacheLibHandle*>(handle)->handle->getSize() - sizeof(DeleterFn);
 }
 
 Cache::DeleterFn CacheLibCache::GetDeleter(Handle* handle) const {
-  throw std::runtime_error("NOT SUPPORTED");
+  char *mem = reinterpret_cast<char*>(reinterpret_cast<CacheLibHandle*>(handle)->handle->getMemory());
+  return *reinterpret_cast<DeleterFn*>(mem);
 }
 
 void CacheLibCache::DisownData() {
@@ -128,11 +130,19 @@ Status CacheLibCache::Insert(const Slice& key, void* value, size_t charge,
 {
   // XXX: store deleter inside item.
 
+  // XXX: handle null value with size by reducing capacity (shrinkPool maybe?)
+  if (!value)
+    return Status::OK();
+
+  auto size = charge + sizeof(deleter);
+
   folly::StringPiece k(key.data(), key.size());
-  auto c_handle = cache->allocate(defaultPool, k, charge);
+  auto c_handle = cache->allocate(defaultPool, k, size);
   if (!c_handle) return Status::NoSpace();
 
-  std::memcpy(c_handle->getMemory(), value, charge);
+  new (c_handle->getMemory()) DeleterFn(deleter);
+  char *mem = reinterpret_cast<char*>(c_handle->getMemory());
+  std::memcpy(mem + sizeof(deleter), value, charge);
 
   cache->insertOrReplace(c_handle);
 
@@ -162,7 +172,7 @@ uint64_t CacheLibCache::NewId() { return id.fetch_add(1); }
 
 bool CacheLibCache::Release(Handle* handle, bool erase_if_last_ref)
 {
-  // reinterpret_cast<CacheLibHandle*>(handle)->handle->decRef();
+
   return true;
 }
 
@@ -171,18 +181,9 @@ bool CacheLibCache::Release(Handle* handle, bool erase_if_last_ref)
 
 
 std::shared_ptr<Cache> NewCacheLibCache(const LRUCacheOptions& cache_opts) {
-  return std::make_shared<facebook::cachelib::CacheLibCache(
+  return std::make_shared<facebook::cachelib::CacheLibCache>(
       cache_opts.capacity, cache_opts.high_pri_pool_ratio,
       cache_opts.metadata_charge_policy);
-}
-
-std::shared_ptr<Cache> NewCacheLibCache(
-    size_t capacity, 
-    double high_pri_pool_ratio,
-    CacheMetadataChargePolicy metadata_charge_policy) {
-  return std::make_shared<facebook::cachelib::CacheLibCache(
-      capacity, high_pri_pool_ratio,
-      metadata_charge_policy);
 }
 
 }  // namespace ROCKSDB_NAMESPACE
