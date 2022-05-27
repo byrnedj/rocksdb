@@ -8,6 +8,7 @@
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <string>
 
@@ -27,7 +28,6 @@ using CacheLibAllocator = ::facebook::cachelib::LruAllocator; // or Lru2QAllocat
 using CacheConfig = typename CacheLibAllocator::Config;
 using CacheKey = typename CacheLibAllocator::Key;
 using CacheItemHandle = typename CacheLibAllocator::WriteHandle;
-
 
 struct CacheLibHandle {
   CacheItemHandle handle;
@@ -56,11 +56,14 @@ class CacheLibCache : public Cache {
   bool Ref(Handle* handle);
   void Erase(const Slice& key);
 
-  uint64_t NewId() { return id.fetch_add(1); }
+  uint64_t NewId();
 
-  void SetCapacity(size_t capacity) { // XXX };
+  void SetCapacity(size_t capacity) {
+    // XXX
+  }
 
-  void SetStrictCapacityLimit(bool strict_capacity_limit) { // not supported by cachelib? } 
+  void SetStrictCapacityLimit(bool strict_capacity_limit) { // not supported by cachelib?
+   } 
 
   bool HasStrictCapacityLimit() const { return false; }
 
@@ -91,10 +94,10 @@ class CacheLibCache : public Cache {
   void EraseUnRefEntries();
 
  private:
-  std::atomic<size_t> id = 0;
   CacheLibAllocator::Config config_;
+  std::atomic<size_t> id;
   std::unique_ptr<CacheLibAllocator> cache;
-  int num_shards_ = 0;
+  ::facebook::cachelib::PoolId defaultPool;
 };
 
 }  // namespace facebook 

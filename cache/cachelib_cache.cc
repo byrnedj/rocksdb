@@ -23,6 +23,9 @@
 
 namespace ROCKSDB_NAMESPACE {
 namespace {
+static std::unordered_map<std::string, OptionTypeInfo> memory_tier_option_map = {
+};
+  
 static std::unordered_map<std::string, OptionTypeInfo> cachelib_option_map = {
      {"capacity",
       {0, OptionType::kUnknown, OptionVerificationType::kNormal, OptionTypeFlags::kDontCompare}.
@@ -48,13 +51,20 @@ static std::unordered_map<std::string, OptionTypeInfo> cachelib_option_map = {
   
 namespace facebook {
 namespace cachelib {
-CacheLibCache::CacheLibCache(size_t capacity) {
+CacheLibCache::CacheLibCache(size_t capacity)
+                   id(0) {
   config_
     .setCacheSize(capacity) // 1GB
     .setCacheName("CacheLibCache")
     .setAccessConfig(
 		     {25 /* bucket power */, 10 /* lock power */}) // assuming caching 20
     // million items
+  //params for multi-tier
+  //tier 1 file path + ratio
+  //tier n file path + ratio 5
+  //.configureMemoryTiers( {
+  //        MemoryTierCacheConfig::fromFile("/dev/shm/file1").setRatio(1),
+  //        MemoryTierCacheConfig::fromFile("/mnt/pmem1/file1").setRatio(2)) })
     RegisterOptions("", &config_, &cachelib_option_map);
 }
 
@@ -63,6 +73,8 @@ Status CacheLibCache::PrepareOptions(const ConfigOptions& /*options*/) {
     try {
       config_.validate(); // Will throw if bad config
       cache = std::make_unique<CacheLibAllocator>(config_);
+      defaultPool =
+	cache->addPool("default", cache->getCacheMemoryStats().cacheSize);
     } catch (const std::exception& e) {
       return Status::InvalidArgument(e.what());
     }
@@ -70,32 +82,36 @@ Status CacheLibCache::PrepareOptions(const ConfigOptions& /*options*/) {
   return Status::OK();
 }
 
+
 CacheLibCache::~CacheLibCache() {
 }
 
 
 bool CacheLibCache::Ref(Handle* handle) 
 {
-    return false;
+  CacheLibHandle* e = reinterpret_cast<CacheLibHandle*>(handle);
+  // e->handle->incRef();
+  return true;
 }
 
 
 void CacheLibCache::Erase(const Slice& key) {
+    folly::StringPiece k(key.data(), key.size());
+    cache->remove(k);
 }
 
 void* CacheLibCache::Value(Handle* handle) {
-  return reinterpret_cast<const CacheLibHandle*>(handle)->value;
+  return reinterpret_cast<CacheLibHandle*>(handle)->handle->getMemory();
 }
 
 
 //TODO: what is charge (size of data + header)
 size_t CacheLibCache::GetCharge(Handle* handle) const {
-  return reinterpret_cast<const CacheLibHandle*>(handle)->charge;
+  return reinterpret_cast<const CacheLibHandle*>(handle)->handle->getSize();
 }
 
 Cache::DeleterFn CacheLibCache::GetDeleter(Handle* handle) const {
-  auto h = reinterpret_cast<const CacheLibHandle*>(handle);
-  return h->deleter;
+  throw std::runtime_error("NOT SUPPORTED");
 }
 
 void CacheLibCache::DisownData() {
@@ -104,33 +120,69 @@ void CacheLibCache::DisownData() {
 
 void CacheLibCache::EraseUnRefEntries()
 {
-
+  // XXX
 }
 
 Status CacheLibCache::Insert(const Slice& key, void* value, size_t charge,
                         DeleterFn deleter, Handle** handle, Priority priority)
 {
+  // XXX: store deleter inside item.
+
+  folly::StringPiece k(key.data(), key.size());
+  auto c_handle = cache->allocate(defaultPool, k, charge);
+  if (!c_handle) return Status::NoSpace();
+
+  std::memcpy(c_handle->getMemory(), value, charge);
+
+  cache->insertOrReplace(c_handle);
+
+  auto h = new CacheLibHandle;
+  h->handle = std::move(c_handle);
+
+  *handle = reinterpret_cast<Handle*>(h);
+  if (!handle) return Status::NoSpace();
+
   return Status::OK();
 }
 
 Cache::Handle* CacheLibCache::Lookup(const Slice& key, Statistics* stats)
 {
-  return nullptr;
+  // XXX: stats
+
+  folly::StringPiece k(key.data(), key.size());
+  auto c_handle = cache->findToWrite(k);
+
+  auto h = new CacheLibHandle;
+  h->handle = std::move(c_handle);
+
+  return reinterpret_cast<Handle*>(h);
 }
+
+uint64_t CacheLibCache::NewId() { return id.fetch_add(1); }
 
 bool CacheLibCache::Release(Handle* handle, bool erase_if_last_ref)
 {
-  return false;
+  // reinterpret_cast<CacheLibHandle*>(handle)->handle->decRef();
+  return true;
 }
 
 }  // 
 }  // namespace facebook
 
-std::shared_ptr<Cache> CacheLibCache(
-    size_t capacity, int num_shard_bits, bool strict_capacity_limit,
+
+std::shared_ptr<Cache> NewCacheLibCache(const LRUCacheOptions& cache_opts) {
+  return std::make_shared<facebook::cachelib::CacheLibCache(
+      cache_opts.capacity, cache_opts.high_pri_pool_ratio,
+      cache_opts.metadata_charge_policy);
+}
+
+std::shared_ptr<Cache> NewCacheLibCache(
+    size_t capacity, 
+    double high_pri_pool_ratio,
     CacheMetadataChargePolicy metadata_charge_policy) {
-  return std::make_shared<facebook::cachelib::CacheLibCache>(
-      capacity, num_shard_bits, strict_capacity_limit, metadata_charge_policy);
+  return std::make_shared<facebook::cachelib::CacheLibCache(
+      capacity, high_pri_pool_ratio,
+      metadata_charge_policy);
 }
 
 }  // namespace ROCKSDB_NAMESPACE
