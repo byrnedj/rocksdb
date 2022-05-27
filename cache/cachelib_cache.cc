@@ -52,6 +52,37 @@ static std::unordered_map<std::string, OptionTypeInfo> cachelib_option_map = {
   
 namespace facebook {
 namespace cachelib {
+
+// class MemoryAllocatorCachelib: public MemoryAllocator {
+// public:
+//   CacheLibAllocator* alloc;
+
+//     // Allocate a block of at least size. Has to be thread-safe.
+//   void* Allocate(size_t s) {
+//       auto size = s + sizeof(DeleterFn);
+
+//       folly::StringPiece k(key.data(), key.size());
+//       auto c_handle = cache->allocate(defaultPool, k, size);
+//       if (!c_handle) return Status::NoSpace();
+
+//       new (c_handle->getMemory()) DeleterFn(deleter);
+//       char *mem = reinterpret_cast<char*>(c_handle->getMemory());
+//       std::memcpy(mem + sizeof(deleter), value, charge);
+
+//       cache->insertOrReplace(c_handle);
+
+//       auto h = new CacheLibHandle;
+//       if (!h) return Status::NoSpace();
+
+//       h->handle = std::move(c_handle);
+//   }
+
+//   // Deallocate previously allocated block. Has to be thread-safe.
+//   void Deallocate(void* p) {
+
+//   }
+// };
+
 CacheLibCache::CacheLibCache(size_t capacity):
                    id(0) {
   config_
@@ -63,8 +94,10 @@ CacheLibCache::CacheLibCache(size_t capacity):
     .usePosixForShm()
   .configureMemoryTiers({
          ::facebook::cachelib::MemoryTierCacheConfig::fromShm().setRatio(1),
-         ::facebook::cachelib::MemoryTierCacheConfig::fromFile("/mnt/pmem/file1").setRatio(1)});
+         // ::facebook::cachelib::MemoryTierCacheConfig::fromFile("/mnt/pmem/file1").setRatio(1)
+         });
     RegisterOptions("", &config_, &cachelib_option_map);
+    //memory_allocator = std::make_unique<MemoryAllocatorCachelib>();
 }
 
 Status CacheLibCache::PrepareOptions(const ConfigOptions& /*options*/) {
@@ -74,6 +107,7 @@ Status CacheLibCache::PrepareOptions(const ConfigOptions& /*options*/) {
       cache = std::make_unique<CacheLibAllocator>(CacheLibAllocator::SharedMemNew, config_);
       defaultPool =
 	cache->addPool("default", cache->getCacheMemoryStats().cacheSize);
+      // memory_allocator->alloc = cache.get();
     } catch (const std::exception& e) {
       return Status::InvalidArgument(e.what());
     }
@@ -141,6 +175,8 @@ Status CacheLibCache::Insert(const Slice& key, void* value, size_t charge,
   if (!value)
     return Status::OK();
 
+  deleter = [](const Slice&, void*) {};
+
   auto size = charge + sizeof(deleter);
 
   folly::StringPiece k(key.data(), key.size());
@@ -150,6 +186,8 @@ Status CacheLibCache::Insert(const Slice& key, void* value, size_t charge,
   new (c_handle->getMemory()) DeleterFn(deleter);
   char *mem = reinterpret_cast<char*>(c_handle->getMemory());
   std::memcpy(mem + sizeof(deleter), value, charge);
+
+  delete (char*) value;
 
   cache->insertOrReplace(c_handle);
 

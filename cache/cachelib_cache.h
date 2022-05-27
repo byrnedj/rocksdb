@@ -111,11 +111,16 @@ class CacheLibCache : public Cache {
   void Wait(Handle* /*handle*/);
   void WaitAll(std::vector<Handle*>& /*handles*/);
 
+  // MemoryAllocator* memory_allocator() const override {
+  //   return memory_allocator;
+  // }
+
  private:
   CacheLibAllocator::Config config_;
   std::atomic<size_t> id;
   std::unique_ptr<CacheLibAllocator> cache;
   ::facebook::cachelib::PoolId defaultPool;
+  std::unique_ptr<MemoryAllocator> memory_allocator;
 };
 }  // namespace cachelib
 }  // namespace facebook 
