@@ -21,6 +21,8 @@
 #include "util/mutexlock.h"
 #include "cachelib/allocator/CacheAllocator.h"
 
+#include "util/string_util.h"
+
 namespace ROCKSDB_NAMESPACE {
 namespace {
 static std::unordered_map<std::string, OptionTypeInfo> memory_tier_option_map = {
@@ -28,43 +30,38 @@ static std::unordered_map<std::string, OptionTypeInfo> memory_tier_option_map = 
   
 static std::unordered_map<std::string, OptionTypeInfo> cachelib_option_map = {
      {"capacity",
-      {0, OptionType::kUnknown, OptionVerificationType::kNormal, OptionTypeFlags::kDontCompare}.
+      OptionTypeInfo{0, OptionType::kUnknown, OptionVerificationType::kNormal, OptionTypeFlags::kCompareNever}
          .SetParseFunc([](const ConfigOptions& opts,
                           const std::string& /*name*/, const std::string& value,
                           void* addr) {
-           auto config = static_cast<CacheConfig*>(addr);
+           auto config = static_cast<facebook::cachelib::CacheConfig*>(addr);
 	   auto capacity = ParseSizeT(value);
 	   config->setCacheSize(capacity);
 	   return Status::OK();
 	 })
          .SetSerializeFunc([](const ConfigOptions& opts,
-                          const std::string& /*name*/, const std::string& value,
-                          void* addr) {
-           const auto config = static_cast<CacheConfig*>(addr);
-	   auto capacity = config->GetCacheSize();
+                          const std::string& /*name*/, const void* addr, std::string* value) {
+           const auto config = static_cast<const facebook::cachelib::CacheConfig*>(addr);
+	   auto capacity = config->getCacheSize();
 	   *value = std::to_string(capacity);
 	   return Status::OK();
 	 })
-	 },
+	 }
 };
 } // namespace 
   
 namespace facebook {
 namespace cachelib {
-CacheLibCache::CacheLibCache(size_t capacity)
+CacheLibCache::CacheLibCache(size_t capacity):
                    id(0) {
   config_
     .setCacheSize(capacity) // 1GB
     .setCacheName("CacheLibCache")
     .setAccessConfig(
 		     {25 /* bucket power */, 10 /* lock power */}) // assuming caching 20
-    // million items
-  //params for multi-tier
-  //tier 1 file path + ratio
-  //tier n file path + ratio 5
-  //.configureMemoryTiers( {
-  //        MemoryTierCacheConfig::fromFile("/dev/shm/file1").setRatio(1),
-  //        MemoryTierCacheConfig::fromFile("/mnt/pmem1/file1").setRatio(2)) })
+  .configureMemoryTiers({
+         ::facebook::cachelib::MemoryTierCacheConfig::fromShm().setRatio(1),
+         ::facebook::cachelib::MemoryTierCacheConfig::fromFile("/mnt/pmem1/file1").setRatio(2)});
     RegisterOptions("", &config_, &cachelib_option_map);
 }
 
@@ -172,18 +169,28 @@ uint64_t CacheLibCache::NewId() { return id.fetch_add(1); }
 
 bool CacheLibCache::Release(Handle* handle, bool erase_if_last_ref)
 {
-
+  delete reinterpret_cast<CacheLibHandle*>(handle);
   return true;
+}
+
+bool CacheLibCache::IsReady(Handle* handle)
+{
+  return reinterpret_cast<CacheLibHandle*>(handle)->handle.isReady();
+}
+
+void CacheLibCache::Wait(Handle* handle)
+{
+  reinterpret_cast<CacheLibHandle*>(handle)->handle.wait();
+}
+
+void CacheLibCache::WaitAll(std::vector<Handle*>& handles)
+{
+  // XXX: optimize
+  for (auto &h : handles)
+    Wait(h);
 }
 
 }  // 
 }  // namespace facebook
-
-
-std::shared_ptr<Cache> NewCacheLibCache(const LRUCacheOptions& cache_opts) {
-  return std::make_shared<facebook::cachelib::CacheLibCache>(
-      cache_opts.capacity, cache_opts.high_pri_pool_ratio,
-      cache_opts.metadata_charge_policy);
-}
 
 }  // namespace ROCKSDB_NAMESPACE

@@ -50,10 +50,10 @@ static int RegisterBuiltinCache(ObjectLibrary& library,
         return guard->get();
       });
   library.AddFactory<Cache>(
-      CacheLibCache::kClassName(),
+      facebook::cachelib::CacheLibCache::kClassName(),
       [](const std::string& /*uri*/, std::unique_ptr<Cache>* guard,
          std::string* errmsg) {
-	guard->reset(new CacheLibCache(1024*1024)); // Default to 1MB cache
+	guard->reset(new facebook::cachelib::CacheLibCache(1024*1024)); // Default to 1MB cache
         return guard->get();
       });
   return 1;

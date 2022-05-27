@@ -13,6 +13,7 @@
 #include <string>
 
 #include "cachelib/allocator/CacheAllocator.h"
+#include "cachelib/allocator/MemoryTierCacheConfig.h"
 #include "cache/sharded_cache.h"
 #include "port/lang.h"
 #include "port/malloc.h"
@@ -103,6 +104,10 @@ class CacheLibCache : public Cache {
   size_t GetPinnedUsage() const { return GetUsage(); }
 
   void EraseUnRefEntries();
+
+  bool IsReady(Handle* /*handle*/);
+  void Wait(Handle* /*handle*/);
+  void WaitAll(std::vector<Handle*>& /*handles*/);
 
  private:
   CacheLibAllocator::Config config_;
