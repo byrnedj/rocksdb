@@ -47,13 +47,14 @@ CacheLibCache::~CacheLibCache() {
 bool CacheLibCache::Ref(Handle* handle) 
 {
   CacheLibHandle* e = reinterpret_cast<CacheLibHandle*>(handle);
-  e->handle->incRef();
+  // e->handle->incRef();
   return true;
 }
 
 
 void CacheLibCache::Erase(const Slice& key) {
-    cache->remove(key);
+    folly::StringPiece k(key.data(), key.size());
+    cache->remove(k);
 }
 
 void* CacheLibCache::Value(Handle* handle) {
@@ -82,15 +83,21 @@ void CacheLibCache::EraseUnRefEntries()
 Status CacheLibCache::Insert(const Slice& key, void* value, size_t charge,
                         DeleterFn deleter, Handle** handle, Priority priority)
 {
-  auto c_handle = cache->allocate(defaultPool, key, charge);
-  if (!c_handle) return status::NoSpace();
+  // XXX: store deleter inside item.
 
-  std::memcpy(handle->getMemory(), value, charge);
+  folly::StringPiece k(key.data(), key.size());
+  auto c_handle = cache->allocate(defaultPool, k, charge);
+  if (!c_handle) return Status::NoSpace();
+
+  std::memcpy(c_handle->getMemory(), value, charge);
 
   cache->insertOrReplace(c_handle);
 
-  *handle = reinterpret_cast<Handle*>(new CacheLibHandle{std::move(c_handle)});
-  if (!handle) return status::NoSpace();
+  auto h = new CacheLibHandle;
+  h->handle = std::move(c_handle);
+
+  *handle = reinterpret_cast<Handle*>(h);
+  if (!handle) return Status::NoSpace();
 
   return Status::OK();
 }
@@ -99,15 +106,20 @@ Cache::Handle* CacheLibCache::Lookup(const Slice& key, Statistics* stats)
 {
   // XXX: stats
 
-  auto c_handle = cache->find(key);
-  return reinterpret_cast<Handle*>(new CacheLibHandle{std::move(c_handle)});
+  folly::StringPiece k(key.data(), key.size());
+  auto c_handle = cache->findToWrite(k);
+
+  auto h = new CacheLibHandle;
+  h->handle = std::move(c_handle);
+
+  return reinterpret_cast<Handle*>(h);
 }
 
 uint64_t CacheLibCache::NewId() { return id.fetch_add(1); }
 
 bool CacheLibCache::Release(Handle* handle, bool erase_if_last_ref)
 {
-  reinterpret_cast<CacheLibHandle*>(handle)->handle->decRef();
+  // reinterpret_cast<CacheLibHandle*>(handle)->handle->decRef();
   return true;
 }
 
